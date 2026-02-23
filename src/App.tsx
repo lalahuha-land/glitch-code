@@ -133,16 +133,14 @@ const Navbar = () => {
   const soundRef = useRef<Howl | null>(null);
 
   useEffect(() => {
-    soundRef.current = new Howl({
-      src: ['https://assets.mixkit.co/sfx/preview/mixkit-deep-hum-ambient-2475.mp3'],
-      loop: true,
-      volume: 0.2,
-    });
-
-    return () => {
-      soundRef.current?.unload();
-    };
-  }, []);
+  soundRef.current = new Howl({
+    src: ['https://assets.mixkit.co/sfx/preview/mixkit-deep-hum-ambient-2475.mp3'],
+    loop: true,
+    volume: 0.2,
+    html5: true // Streams the audio instead of downloading the whole buffer
+  });
+  return () => { soundRef.current?.unload(); };
+}, []);
 
   const toggleMute = () => {
     if (isMuted) {
@@ -198,10 +196,47 @@ const Navbar = () => {
   );
 };
 
+// --- New Helper Component: Magnetic Interaction ---
+const MagneticWrapper = ({ children, pull = 0.5 }: { children: React.ReactNode, pull?: number }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const { clientX, clientY } = e;
+    const { left, top, width, height } = ref.current.getBoundingClientRect();
+    const x = (clientX - (left + width / 2)) * pull;
+    const y = (clientY - (top + height / 2)) * pull;
+    setPosition({ x, y });
+  };
+
+  const reset = () => setPosition({ x: 0, y: 0 });
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={reset}
+      animate={{ x: position.x, y: position.y }}
+      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
 const Hero = () => {
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 500], [0, 200]);
-  
+
+  const scrollToProjects = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = document.querySelector('#projects');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -225,7 +260,6 @@ const Hero = () => {
         damping: 15,
         mass: 1,
         duration: 0.8, 
-        ease: [0.215, 0.61, 0.355, 1] as const 
       }
     },
   };
@@ -234,14 +268,14 @@ const Hero = () => {
     <section className="relative h-screen flex flex-col justify-center items-center overflow-hidden px-6">
       {/* Chapter Marker */}
       <div className="absolute left-10 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-4 z-20">
-        <span className="font-mono text-[10px] uppercase tracking-[0.5em] vertical-text text-apex-yellow">Chapter</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.5em] [writing-mode:vertical-lr] text-apex-yellow">Chapter</span>
         <div className="w-[1px] h-20 bg-apex-yellow/30" />
         <span className="font-display font-black text-4xl text-apex-yellow">01</span>
       </div>
 
       {/* Vertical Side Text */}
       <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block z-20">
-        <span className="font-display font-black text-[10vh] text-stroke opacity-10 vertical-text uppercase tracking-tighter">
+        <span className="font-display font-black text-[10vh] text-stroke opacity-10 [writing-mode:vertical-lr] uppercase tracking-tighter">
           The Beginning
         </span>
       </div>
@@ -293,13 +327,13 @@ const Hero = () => {
           style={{ y: y1 }}
           className="text-[12vw] md:text-[10vw] leading-[0.85] font-black mb-6"
         >
-          <motion.span variants={itemVariants} className="block">
-            ALEX
+          <motion.span variants={itemVariants} className="block glitch-hover cursor-default">
+            AMMAR
           </motion.span>
-          <motion.span variants={itemVariants} className="block text-stroke-yellow">
-            RACING
+          <motion.span variants={itemVariants} className="block text-stroke-yellow glitch-hover cursor-default">
+            GLITCH
           </motion.span>
-          <motion.span variants={itemVariants} className="block">
+          <motion.span variants={itemVariants} className="block glitch-hover cursor-default">
             CODE
           </motion.span>
         </motion.h1>
@@ -313,27 +347,51 @@ const Hero = () => {
 
         <motion.div
           variants={itemVariants}
-          className="flex flex-wrap justify-center gap-4"
+          className="flex flex-wrap justify-center gap-6"
         >
           <Tooltip text="Explore my portfolio">
-            <button className="px-8 py-4 bg-white text-black font-display font-bold uppercase tracking-widest hover:bg-apex-yellow transition-all flex items-center gap-2 group">
-              View Projects <ArrowUpRight className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </button>
+            <MagneticWrapper pull={0.3}>
+              <motion.a 
+                href="#projects"
+                onClick={scrollToProjects}
+                className="btn-racing bg-white text-black no-underline flex items-center gap-2 group cursor-pointer"
+              >
+                View Projects <ArrowUpRight className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              </motion.a>
+            </MagneticWrapper>
           </Tooltip>
+
           <Tooltip text="Learn about my journey">
-            <button className="px-8 py-4 border border-white/20 font-display font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
-              My Story
-            </button>
+            <MagneticWrapper pull={0.3}>
+              <button className="btn-racing border-2 border-white/20 text-white hover:bg-white/10 transition-all cursor-pointer">
+                My Story
+              </button>
+            </MagneticWrapper>
           </Tooltip>
         </motion.div>
       </motion.div>
+
+      {/* Magnetic Social Icons */}
+      <div className="absolute right-10 bottom-10 hidden lg:flex flex-col gap-6 z-20">
+        {[Github, Linkedin, Twitter].map((Icon, i) => (
+          <MagneticWrapper key={i} pull={0.5}>
+            <motion.a 
+              href="#" 
+              whileHover={{ color: '#f0ff00' }}
+              className="text-white/30 transition-colors cursor-pointer block p-2"
+            >
+              <Icon size={20} />
+            </motion.a>
+          </MagneticWrapper>
+        ))}
+      </div>
 
       {/* Live Telemetry Widget */}
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 2, duration: 1 }}
-        className="absolute right-10 bottom-32 hidden xl:block glass p-6 border-l-4 border-l-apex-yellow"
+        className="absolute left-10 bottom-10 hidden xl:block bg-black/40 backdrop-blur-md p-6 border-l-4 border-l-apex-yellow"
       >
         <div className="font-mono text-[10px] uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
           <Zap size={10} className="text-apex-yellow" /> Live Telemetry
